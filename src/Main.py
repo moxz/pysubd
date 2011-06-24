@@ -1,5 +1,6 @@
-#All not found together
 #File browser(multiselect)
+#Caching feature
+
 from PyQt4 import QtCore, QtGui
 from gui import  Ui_MainWindow
 import os, sys
@@ -32,12 +33,15 @@ class pysubd(QtGui.QMainWindow):
         self.ui.cancelButton.setDisabled(True)
         self.ui.downloadButton.setDisabled(True)
 
-        # Create thread object and connect its signals to methods on this object
 #        self.ui.progressUpdate.append("------------PySubD Subtitle Downloader----------".center(1200))
-#        self.ui.progressUpdate.append("===================================".center(120))
 
+        # Create thread object and connect its signals to methods on this object
         self.subd = SubtitleDownload()
         self.connect(self.subd, QtCore.SIGNAL("updategui(PyQt_PyObject)"), self.appendUpdates)
+        self.connect(self.subd, QtCore.SIGNAL("updateFound()"), self.updateFound)
+        self.connect(self.subd, QtCore.SIGNAL("updateAvailable()"), self.updateAvailable)
+        self.connect(self.subd, QtCore.SIGNAL("updateDownloaded()"), self.updateDownloaded)
+
         QtCore.QObject.connect(self.ui.cancelButton, QtCore.SIGNAL("clicked()"), self.cancelDownload)
         self.ui.cancelButton.setDisabled(True)
 
@@ -70,15 +74,23 @@ class pysubd(QtGui.QMainWindow):
         self.ui.progressUpdate.append(str(update))
         self.ui.scrollArea.verticalScrollBar().setValue(self.ui.scrollArea.verticalScrollBar().maximum())
 
+    def updateFound(self):
+        self.ui.foundlcdNumber.display(int(self.ui.foundlcdNumber.value() + 1))
 
-    def startDownload(self, list):
-        self.ponderous.stopTask()
-        self.ui.downloadButton.setEnabled(True)
-        self.ui.cancelButton.setDisabled(True)
-        self.ui.startDate.setEnabled(True)
-        self.ui.endDate.setEnabled(True)
-        #Re-enable checkbox checkability once the download has been cancelled
-        self.checkBoxDisability(False)
+    def updateAvailable(self):
+        self.ui.availablelcdNumber.display(int(self.ui.availablelcdNumber.value() + 1))
+
+    def updateDownloaded(self):
+        self.ui.downloadedlcdNumber.display(int(self.ui.downloadedlcdNumber.value() + 1))
+
+#    def startDownload(self, list):
+#        self.ponderous.stopTask()
+#        self.ui.downloadButton.setEnabled(True)
+#        self.ui.cancelButton.setDisabled(True)
+#        self.ui.startDate.setEnabled(True)
+#        self.ui.endDate.setEnabled(True)
+#        #Re-enable checkbox checkability once the download has been cancelled
+#        self.checkBoxDisability(False)
 
 class SubtitleDownload(QtCore.QThread):
     '''Traverses a directory and all subdirectories and downloads subtitles.
@@ -90,7 +102,6 @@ class SubtitleDownload(QtCore.QThread):
     api_url = 'http://api.opensubtitles.org/xml-rpc'
     login_token = None
     server = None
-    moviefiles = {}
 
     def __init__(self, parent=None):
         QtCore.QThread.__init__(self, parent)
@@ -105,6 +116,7 @@ class SubtitleDownload(QtCore.QThread):
 
     def run(self):
         self.stopping = False
+        self.moviefiles = {}
 
         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Searching for video files...")
         """Check if the movie_path is a file or directory.
@@ -137,6 +149,8 @@ class SubtitleDownload(QtCore.QThread):
 
         if os.path.splitext(file)[1].lower() in video_extns:
                     self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Found: " + file)
+                    self.emit(QtCore.SIGNAL("updateFound()"))
+
                     filehash = self.hashFile(os.path.join(parentdir, file))
                     filesize = os.path.getsize(os.path.join(parentdir, file))
                     self.moviefiles[filehash] = {'dir': parentdir,
@@ -147,9 +161,14 @@ class SubtitleDownload(QtCore.QThread):
         '''Log in to OpenSubtitles'''
         self.server = ServerProxy(self.api_url, verbose=False)
         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Logging in...")
-        resp = self.server.LogIn('', '', 'en', 'OS Test User Agent')
-        self.check_status(resp)
-        self.login_token = resp['token']
+        try:
+            resp = self.server.LogIn('', '', 'en', 'OS Test User Agent')
+            self.check_status(resp)
+            self.login_token = resp['token']
+        except Error as e:
+            self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), e)
+
+
 
     def logout(self):
         '''Log out from OpenSubtitles'''
@@ -175,7 +194,7 @@ class SubtitleDownload(QtCore.QThread):
             return
 
         if resp['data'] == False:
-            self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "No subtitles found")
+            self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, no subtitles were found!")
             return
 
         # A dictionary to store the subtitle id's found corresponding to every file hash 
@@ -183,25 +202,33 @@ class SubtitleDownload(QtCore.QThread):
         for result in resp['data']:
             if int(result['SubBad']) != 1 and not subtitles.get(result['MovieHash']):
                 subtitles[result['MovieHash']] = {'subid':result['IDSubtitleFile'], 'downcount':result['SubDownloadsCnt']}
+                self.emit(QtCore.SIGNAL("updateAvailable()"))
 
             elif int(result['SubBad']) != 1 and subtitles.get(result['MovieHash']) and int(subtitles.get(result['MovieHash'])['downcount']) < int(result['SubDownloadsCnt']):
                 subtitles[result['MovieHash']] = {'subid':result['IDSubtitleFile'], 'downcount':result['SubDownloadsCnt']}
 
         my_logger.debug("Length of final subtitle string : " + str(len(subtitles)))
 
+        notfound = []
         for hash, filedetails in self.moviefiles.iteritems():
             if not self.stopping:
                 if subtitles.get(hash):
                         subtitle = self.download_subtitles([subtitles[hash]['subid']])
                         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Saving subtitle for: " + filedetails['file'])
+                        self.emit(QtCore.SIGNAL("updateDownloaded()"))
                         filename = os.path.join(filedetails['dir'], os.path.splitext(filedetails['file'])[0] + ".srt")
                         file = open(filename, "wb")
                         file.write(subtitle)
                         file.close()
                 else:
-                    self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "No subtitle found for: " + filedetails['file'])
+                    notfound.append(filedetails['file'])
             else:
                 return
+
+        #Report all the files for which no subtitles were found.
+        notfound.sort(key=str.lower)
+        for file in notfound:
+                self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "No subtitles found for: " + file)
 
     def download_subtitles(self, subparam):
         resp = self.server.DownloadSubtitles(self.login_token, subparam)
@@ -233,7 +260,7 @@ class SubtitleDownload(QtCore.QThread):
             hash = filesize
 
             if filesize < 65536 * 2:
-                return "SizeError"
+                return "SizeError: Minimum file size must be 120Kb"
 
             for x in range(65536 // bytesize):
                 buffer = f.read(bytesize)

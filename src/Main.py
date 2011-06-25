@@ -11,11 +11,10 @@ import logging.handlers
 
 LOG_FILENAME = 'pysubd.log'
 
-my_logger = logging.getLogger('MyLoggerSend')
+my_logger = logging.getLogger('pysubdLogger')
 my_logger.setLevel(logging.DEBUG)
-# Add the log message handler to the logger
 handler = logging.handlers.RotatingFileHandler(
-              LOG_FILENAME, maxBytes=100000, backupCount=2)
+              LOG_FILENAME, maxBytes=150000)
 
 my_logger.addHandler(handler)
 
@@ -37,6 +36,7 @@ class pysubd(QtGui.QMainWindow):
         self.connect(self.subd, QtCore.SIGNAL("updateFound()"), self.updateFound)
         self.connect(self.subd, QtCore.SIGNAL("updateAvailable()"), self.updateAvailable)
         self.connect(self.subd, QtCore.SIGNAL("updateDownloaded()"), self.updateDownloaded)
+        self.connect(self.subd, QtCore.SIGNAL("downloadComplete()"), self.downloadComplete)
 
         QtCore.QObject.connect(self.ui.cancelButton, QtCore.SIGNAL("clicked()"), self.cancelDownload)
         self.ui.cancelButton.setDisabled(True)
@@ -64,7 +64,9 @@ class pysubd(QtGui.QMainWindow):
         self.subd.stopTask()
         self.ui.cancelButton.setDisabled(True)
 
-        # Method called asynchronously by other thread when progress should be updated
+    def downloadComplete(self):
+        self.ui.cancelButton.setDisabled(True)
+
     def appendUpdates(self, update):
 #        my_logger.debug(update)
         self.ui.progressUpdate.append(str(update))
@@ -126,6 +128,8 @@ class SubtitleDownload(QtCore.QThread):
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Done...")
             my_logger.debug("Done...")
             self.logout()
+            self.emit(QtCore.SIGNAL("downloadComplete()"))
+
         except Error as e:
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), ("XML-RPC error:", e))
 
@@ -213,10 +217,10 @@ class SubtitleDownload(QtCore.QThread):
                     subtitles[hash] = {'subid':subid, 'downcount':downcount, 'rating':rating}
 
                 #Another good quality subtitle found with the same rating and a higher download count
-                elif float(subtitles[result['MovieHash']]['rating']) == float(result['SubRating']) and int(subtitles[result['MovieHash']]['downcount']) < int(result['SubDownloadsCnt']):
-                    subtitles[result['MovieHash']] = {'subid':result['IDSubtitleFile'], 'downcount':result['SubDownloadsCnt'], 'rating':result['SubRating']}
+                elif float(subtitles[hash]['rating']) == float(rating) and int(subtitles[hash]['downcount']) < int(downcount):
+                    subtitles[hash] = {'subid':subid, 'downcount':downcount, 'rating':rating}
 
-        my_logger.debug("Length of final subtitle string : " + str(len(subtitles)))
+        my_logger.debug("Total number of subtitles found: " + str(len(subtitles)))
 
         notfound = []
         for hash, filedetails in self.moviefiles.iteritems():
@@ -235,7 +239,7 @@ class SubtitleDownload(QtCore.QThread):
             else:
                 return
 
-        #Report all the files for which no subtitles were found.
+        #Report all the files for which no subtitles were found in an alphabetically sorted order.
         notfound.sort(key=str.lower)
         for file in notfound:
                 self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "No subtitles found for: " + file)

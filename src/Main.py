@@ -159,7 +159,6 @@ class SubtitleDownload(QtCore.QThread):
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), e)
             my_logger.debug(str(e))
 
-
     def logout(self):
         '''Log out from OpenSubtitles'''
         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Logging out...")
@@ -199,9 +198,14 @@ class SubtitleDownload(QtCore.QThread):
         for result in resp['data']:
             #The subtitle must not be rated bad
             if int(result['SubBad']) != 1:
-                #First good subtitle found
-                if not subtitles.get(result['MovieHash']):
-                    subtitles[result['MovieHash']] = {'subid':result['IDSubtitleFile'], 'downcount':result['SubDownloadsCnt'], 'rating':result['SubRating']}
+                hash = result['MovieHash']
+                subid = result['IDSubtitleFile']
+                downcount = result['SubDownloadsCnt']
+                rating = result['SubRating']
+
+                #First good matching subtitle found
+                if not subtitles.get(hash):
+                    subtitles[hash] = {'subid':subid, 'downcount':downcount, 'rating':rating}
                     self.emit(QtCore.SIGNAL("updateAvailable()"))
 
                 #Another good quality subtitle found with a perfect rating

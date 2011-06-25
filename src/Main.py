@@ -167,8 +167,6 @@ class SubtitleDownload(QtCore.QThread):
         except Error as e:
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), e)
 
-
-
     def logout(self):
         '''Log out from OpenSubtitles'''
         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Logging out...")
@@ -205,12 +203,20 @@ class SubtitleDownload(QtCore.QThread):
         # A dictionary to store the subtitle id's found corresponding to every file hash 
         subtitles = {}
         for result in resp['data']:
-            if int(result['SubBad']) != 1 and not subtitles.get(result['MovieHash']):
-                subtitles[result['MovieHash']] = {'subid':result['IDSubtitleFile'], 'downcount':result['SubDownloadsCnt']}
-                self.emit(QtCore.SIGNAL("updateAvailable()"))
+            #The subtitle must not be rated bad
+            if int(result['SubBad']) != 1:
+                #First good subtitle found
+                if not subtitles.get(result['MovieHash']):
+                    subtitles[result['MovieHash']] = {'subid':result['IDSubtitleFile'], 'downcount':result['SubDownloadsCnt'], 'rating':result['SubRating']}
+                    self.emit(QtCore.SIGNAL("updateAvailable()"))
 
-            elif int(result['SubBad']) != 1 and subtitles.get(result['MovieHash']) and int(subtitles.get(result['MovieHash'])['downcount']) < int(result['SubDownloadsCnt']):
-                subtitles[result['MovieHash']] = {'subid':result['IDSubtitleFile'], 'downcount':result['SubDownloadsCnt']}
+                #Another good quality subtitle found with a higher subtitle rating
+                elif float(subtitles[result['MovieHash']]['rating']) < float(result['SubRating']):
+                    subtitles[result['MovieHash']] = {'subid':result['IDSubtitleFile'], 'downcount':result['SubDownloadsCnt'], 'rating':result['SubRating']}
+
+                #Another good quality subtitle found with the same rating and a higher download count
+                elif float(subtitles[result['MovieHash']]['rating']) == float(result['SubRating']) and int(subtitles[result['MovieHash']]['downcount']) < int(result['SubDownloadsCnt']):
+                    subtitles[result['MovieHash']] = {'subid':result['IDSubtitleFile'], 'downcount':result['SubDownloadsCnt'], 'rating':result['SubRating']}
 
         my_logger.debug("Length of final subtitle string : " + str(len(subtitles)))
 

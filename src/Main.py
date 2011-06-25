@@ -1,5 +1,4 @@
 #File browser(multiselect)
-#Caching feature
 
 from PyQt4 import QtCore, QtGui
 from gui import  Ui_MainWindow
@@ -187,11 +186,17 @@ class SubtitleDownload(QtCore.QThread):
                            'moviebytesize': str(self.moviefiles[hash]['size'])})
         my_logger.debug("Length of search string: " + str(len(search)))
 
-        if not self.stopping:
-            resp = self.server.SearchSubtitles(self.login_token, search)
-            self.check_status(resp)
-        else:
-            return
+        resp = {}
+        resp['data'] = []
+
+        while search[:500]:
+            if not self.stopping:
+                tempresp = self.server.SearchSubtitles(self.login_token, search[:500])
+                resp['data'].extend(tempresp['data'])
+                self.check_status(tempresp)
+                search = search[500:]
+            else:
+                return
 
         if resp['data'] == False:
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, no subtitles were found!")

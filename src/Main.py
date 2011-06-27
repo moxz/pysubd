@@ -30,11 +30,8 @@ class pysubd(QtGui.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.ui.cancelButton.setDisabled(True)
-        self.ui.downloadButton.setDisabled(True)
-
 #        self.ui.progressUpdate.append("------------PySubD Subtitle Downloader----------".center(1200))
 
-        # Create thread object and connect its signals to methods on this object
         self.subd = SubtitleDownload()
         self.connect(self.subd, QtCore.SIGNAL("updategui(PyQt_PyObject)"), self.appendUpdates)
         self.connect(self.subd, QtCore.SIGNAL("updateFound()"), self.updateFound)
@@ -81,15 +78,6 @@ class pysubd(QtGui.QMainWindow):
 
     def updateDownloaded(self):
         self.ui.downloadedlcdNumber.display(int(self.ui.downloadedlcdNumber.value() + 1))
-
-#    def startDownload(self, list):
-#        self.ponderous.stopTask()
-#        self.ui.downloadButton.setEnabled(True)
-#        self.ui.cancelButton.setDisabled(True)
-#        self.ui.startDate.setEnabled(True)
-#        self.ui.endDate.setEnabled(True)
-#        #Re-enable checkbox checkability once the download has been cancelled
-#        self.checkBoxDisability(False)
 
 class SubtitleDownload(QtCore.QThread):
     '''Traverses a directory and all subdirectories and downloads subtitles.

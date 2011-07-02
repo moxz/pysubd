@@ -1,4 +1,4 @@
-#File browser(multiselect)
+#TODO:case of no internet connection or  a midway disconnection
 
 from PyQt4 import QtCore, QtGui
 from gui import  Ui_MainWindow
@@ -66,7 +66,7 @@ class pysubd(QtGui.QMainWindow):
 
         # Method called asynchronously by other thread when progress should be updated
     def appendUpdates(self, update):
-        my_logger.debug(update)
+#        my_logger.debug(update)
         self.ui.progressUpdate.append(str(update))
         self.ui.scrollArea.verticalScrollBar().setValue(self.ui.scrollArea.verticalScrollBar().maximum())
 
@@ -124,6 +124,7 @@ class SubtitleDownload(QtCore.QThread):
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Searching for subtitles...")
             self.search_subtitles()
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Done...")
+            my_logger.debug("Done...")
             self.logout()
         except Error as e:
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), ("XML-RPC error:", e))
@@ -136,6 +137,7 @@ class SubtitleDownload(QtCore.QThread):
 
         if os.path.splitext(file)[1].lower() in video_extns:
                     self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Found: " + file)
+                    my_logger.debug("Found: " + file)
                     self.emit(QtCore.SIGNAL("updateFound()"))
 
                     filehash = self.hashFile(os.path.join(parentdir, file))
@@ -148,12 +150,15 @@ class SubtitleDownload(QtCore.QThread):
         '''Log in to OpenSubtitles'''
         self.server = ServerProxy(self.api_url, verbose=False)
         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Logging in...")
+        my_logger.debug("Logging in...")
         try:
             resp = self.server.LogIn('', '', 'en', 'OS Test User Agent')
             self.check_status(resp)
             self.login_token = resp['token']
         except Error as e:
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), e)
+            my_logger.debug(str(e))
+
 
     def logout(self):
         '''Log out from OpenSubtitles'''
@@ -186,6 +191,7 @@ class SubtitleDownload(QtCore.QThread):
 
         if resp['data'] == False:
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, no subtitles were found!")
+            my_logger.debug("Sorry, no subtitles were found!")
             return
 
         # A dictionary to store the subtitle id's found corresponding to every file hash 
@@ -198,9 +204,9 @@ class SubtitleDownload(QtCore.QThread):
                     subtitles[result['MovieHash']] = {'subid':result['IDSubtitleFile'], 'downcount':result['SubDownloadsCnt'], 'rating':result['SubRating']}
                     self.emit(QtCore.SIGNAL("updateAvailable()"))
 
-                #Another good quality subtitle found with a higher subtitle rating
-                elif float(subtitles[result['MovieHash']]['rating']) < float(result['SubRating']):
-                    subtitles[result['MovieHash']] = {'subid':result['IDSubtitleFile'], 'downcount':result['SubDownloadsCnt'], 'rating':result['SubRating']}
+                #Another good quality subtitle found with a perfect rating
+                elif float(rating)==10.0:
+                    subtitles[hash] = {'subid':subid, 'downcount':downcount, 'rating':rating}
 
                 #Another good quality subtitle found with the same rating and a higher download count
                 elif float(subtitles[result['MovieHash']]['rating']) == float(result['SubRating']) and int(subtitles[result['MovieHash']]['downcount']) < int(result['SubDownloadsCnt']):
@@ -214,6 +220,7 @@ class SubtitleDownload(QtCore.QThread):
                 if subtitles.get(hash):
                         subtitle = self.download_subtitles([subtitles[hash]['subid']])
                         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Saving subtitle for: " + filedetails['file'])
+                        my_logger.debug("Saving subtitle for: " + filedetails['file']+"   File Hash : "+hash )
                         self.emit(QtCore.SIGNAL("updateDownloaded()"))
                         filename = os.path.join(filedetails['dir'], os.path.splitext(filedetails['file'])[0] + ".srt")
                         file = open(filename, "wb")

@@ -23,22 +23,50 @@ if sys.version_info[0] == 3:
 else:
     from xmlrpclib import ServerProxy, Error
 
+class FileDialog(QtGui.QFileDialog):
+    def __init__(self, *args):
+        QtGui.QFileDialog.__init__(self, *args)
+        self.setOption(self.DontUseNativeDialog, True)
+        self.setFileMode(self.ExistingFiles)
+        btns = self.findChildren(QtGui.QPushButton)
+        self.openBtn = [x for x in btns if 'open' in str(x.text()).lower()][0]
+        self.openBtn.clicked.disconnect()
+        self.openBtn.clicked.connect(self.openClicked)
+        self.tree = self.findChild(QtGui.QTreeView)
+        self.selectedFiles=[]
+        
+    def openClicked(self):
+        inds = self.tree.selectionModel().selectedIndexes()
+        files = []
+        for i in inds:
+            if i.column() == 0:
+                files.append(os.path.join(str(self.directory().absolutePath()),str(i.data().toString())))
+        self.selectedFiles = files
+        self.hide()
+
+    def filesSelected(self):
+        return self.selectedFiles
+
 class pysubd(QtGui.QMainWindow):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.ui.cancelButton.setDisabled(True)
-#        self.ui.progressUpdate.append("------------PySubD Subtitle Downloader----------".center(1200))
-
+        self.tobeSearched=[]
+        self.ui.progressUpdate.append("--------------------------------------------PySubD Subtitle Downloader-------------------------------------------")
+        self.ui.progressUpdate.append("------------------------------Drag and drop your movie files or folders here--------------------------------")
         self.subd = SubtitleDownload()
         self.connect(self.subd, QtCore.SIGNAL("updategui(PyQt_PyObject)"), self.appendUpdates)
         self.connect(self.subd, QtCore.SIGNAL("updateFound()"), self.updateFound)
         self.connect(self.subd, QtCore.SIGNAL("updateAvailable()"), self.updateAvailable)
         self.connect(self.subd, QtCore.SIGNAL("updateDownloaded()"), self.updateDownloaded)
-        self.connect(self.subd, QtCore.SIGNAL("downloadComplete()"), self.downloadComplete)
+        self.connect(self.subd, QtCore.SIGNAL("downloadComplete(PyQt_PyObject)"), self.downloadComplete)
 
         QtCore.QObject.connect(self.ui.cancelButton, QtCore.SIGNAL("clicked()"), self.cancelDownload)
+        QtCore.QObject.connect(self.ui.browseButton, QtCore.SIGNAL("clicked()"), self.openFileDialog)
+
+        self.cancelled = False
         self.ui.cancelButton.setDisabled(True)
 
     def dragEnterEvent(self, event):
@@ -48,27 +76,52 @@ class pysubd(QtGui.QMainWindow):
             event.ignore()
 
     def dropEvent(self, event):
+        self.cancelled = False
         if event.mimeData().hasUrls:
             event.setDropAction(QtCore.Qt.CopyAction)
             event.accept()
             links = []
             for url in event.mimeData().urls():
                 links.append(str(url.toLocalFile()))
+            
             self.ui.cancelButton.setEnabled(True)
-            self.subd.init(links)
-
+            if self.tobeSearched:
+                self.tobeSearched.extend(links)
+            else:
+                self.tobeSearched.extend(links)
+                self.subd.init(links)
         else:
             event.ignore()
 
+    def openFileDialog(self):
+        self.cancelled = False
+        d = FileDialog()
+        d.exec_()
+        x = d.filesSelected()
+        
+        if x:
+            self.ui.cancelButton.setEnabled(True)
+            self.ui.browseButton.setDisabled(True)
+            self.tobeSearched.extend(x)
+            self.subd.init(x)
+            
     def cancelDownload(self):
+        self.cancelled = True
         self.subd.stopTask()
         self.ui.cancelButton.setDisabled(True)
 
-    def downloadComplete(self):
-        self.ui.cancelButton.setDisabled(True)
+    def downloadComplete(self,donepaths):
+        for path in donepaths:
+            self.tobeSearched.remove(str(path))
+        if self.tobeSearched and not self.cancelled:
+            self.ui.browseButton.setDisabled(True)
+            self.ui.cancelButton.setEnabled(True)
+            self.subd.init(self.tobeSearched)
+        else:
+            self.ui.cancelButton.setDisabled(True)
+            self.ui.browseButton.setEnabled(True)
 
     def appendUpdates(self, update):
-#        my_logger.debug(update)
         self.ui.progressUpdate.append(str(update))
         self.ui.scrollArea.verticalScrollBar().setValue(self.ui.scrollArea.verticalScrollBar().maximum())
 
@@ -99,7 +152,10 @@ class SubtitleDownload(QtCore.QThread):
     def init(self, movie_paths):
         self._movie_paths = movie_paths
         self.start()
-
+        
+    def __del__(self):
+        self.wait()
+ 
     def stopTask(self):
         self.stopping = True
 
@@ -128,7 +184,7 @@ class SubtitleDownload(QtCore.QThread):
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Done...")
             my_logger.debug("Done...")
             self.logout()
-            self.emit(QtCore.SIGNAL("downloadComplete()"))
+            self.emit(QtCore.SIGNAL("downloadComplete(PyQt_PyObject)"),self._movie_paths)
 
         except Error as e:
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), ("XML-RPC error:", e))
@@ -226,6 +282,7 @@ class SubtitleDownload(QtCore.QThread):
         for hash, filedetails in self.moviefiles.iteritems():
             if not self.stopping:
                 if subtitles.get(hash):
+                    try:
                         subtitle = self.download_subtitles([subtitles[hash]['subid']])
                         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Saving subtitle for: " + filedetails['file'])
                         my_logger.debug("Saving subtitle for: " + filedetails['file']+"   File Hash : "+hash )
@@ -234,6 +291,9 @@ class SubtitleDownload(QtCore.QThread):
                         file = open(filename, "wb")
                         file.write(subtitle)
                         file.close()
+                    except IOError:
+                        self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "IO Error in saving subs for  "+ filedetails['file'])
+                        
                 else:
                     notfound.append(filedetails['file'])
             else:

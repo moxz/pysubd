@@ -1,17 +1,26 @@
-OpenSubtitles Subtitle Downloader
+Python Subtitle Downloader(PySubD)
 =================================
 
-* Walks through directories searching for *.avi and *.mkv
-* Searches OpenSubtitles.org for matching subtitles
-* Downloads subtitles
+* Recursively walks through the directories searching for video files in almost every well known format.
+* Searches OpenSubtitles.org and fetches the best quality subs available.
+* Downloads subtitles and places them along with the video file itself.
 
 Requirements
 ------------
-
-This script requires Python 3.
-No extra libraries are needed.
+None for the compiled binaries.
 
 Usage
 -----
+Just Drag & Drop your drive(s)/folder(s)/video file(s) into the program window.
+Alternatively you can simply use the browse button to select the video files and directories, and click the "Open" button.
+Sit back and relax, while pysubd finds and downloads the best "eng" language subs for you!
 
-opensubtitles.py directory
+
+Author
+------
+Sahil Gupta
+
+PySubD is still in beta phase.
+Send in bug reports, feature suggestions or plain feedbacks to sahilgupt29@gmail.com.
+
+PySubD is free software. Source code can be found at https://github.com/sahilgupta/pysubd/

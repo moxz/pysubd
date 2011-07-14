@@ -40,7 +40,10 @@ class FileDialog(QtGui.QFileDialog):
         files = []
         for i in inds:
             if i.column() == 0:
-                files.append(os.path.join(str(self.directory().absolutePath()),str(i.data().toString())))
+                pth = str(self.directory().absoluteFilePath(i.data().toString()))
+                if os.path.isdir(pth):
+                    pth  = pth+'/'
+                files.append(pth)
         self.selectedFiles = files
         self.hide()
 
@@ -109,6 +112,7 @@ class pysubd(QtGui.QMainWindow):
         self.cancelled = True
         self.subd.stopTask()
         self.ui.cancelButton.setDisabled(True)
+        self.ui.browseButton.setEnabled(True)
 
     def downloadComplete(self,donepaths):
         for path in donepaths:
@@ -153,8 +157,8 @@ class SubtitleDownload(QtCore.QThread):
         self._movie_paths = movie_paths
         self.start()
         
-    def __del__(self):
-        self.wait()
+#    def __del__(self):
+#       self.wait()
  
     def stopTask(self):
         self.stopping = True
@@ -242,16 +246,18 @@ class SubtitleDownload(QtCore.QThread):
         while search[:500]:
             if not self.stopping:
                 tempresp = self.server.SearchSubtitles(self.login_token, search[:500])
-                resp['data'].extend(tempresp['data'])
-                self.check_status(tempresp)
-                search = search[500:]
+                if tempresp['data'] != False:
+			resp['data'].extend(tempresp['data'])
+		self.check_status(tempresp)
+		search = search[500:]
             else:
                 return
-
-        if resp['data'] == False:
-            self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, no subtitles were found!")
-            my_logger.debug("Sorry, no subtitles were found!")
-            return
+	
+	#Check if we actually got some matching subtitles to download, else return
+	if not resp['data']:
+		self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, no subtitles were found!")
+		my_logger.debug("Sorry, no subtitles were found!")
+		return
 
         # A dictionary to store the subtitle id's found corresponding to every file hash 
         subtitles = {}
@@ -285,7 +291,7 @@ class SubtitleDownload(QtCore.QThread):
                     try:
                         subtitle = self.download_subtitles([subtitles[hash]['subid']])
                         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Saving subtitle for: " + filedetails['file'])
-                        my_logger.debug("Saving subtitle for: " + filedetails['file']+"   File Hash : "+hash )
+			my_logger.debug("Saving subtitle for: " + filedetails['file']+"    Hash : "+hash + "   Rating: " + subtitles[hash]['rating']+    							 "  DownCount: " + subtitles[hash]['downcount'])
                         self.emit(QtCore.SIGNAL("updateDownloaded()"))
                         filename = os.path.join(filedetails['dir'], os.path.splitext(filedetails['file'])[0] + ".srt")
                         file = open(filename, "wb")
@@ -303,6 +309,7 @@ class SubtitleDownload(QtCore.QThread):
         notfound.sort(key=str.lower)
         for file in notfound:
                 self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "No subtitles found for: " + file)
+		my_logger.debug(" No subtitles were found for : " + filedetails['file'])
 
     def download_subtitles(self, subparam):
         resp = self.server.DownloadSubtitles(self.login_token, subparam)

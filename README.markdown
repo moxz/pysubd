@@ -20,7 +20,6 @@ Author
 ------
 Sahil Gupta
 
-PySubD is still in beta phase.
 Send in bug reports, feature suggestions or plain feedbacks to sahilgupt29@gmail.com.
 
 PySubD is free software. Source code can be found at https://github.com/sahilgupta/pysubd/

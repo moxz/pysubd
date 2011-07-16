@@ -157,9 +157,9 @@ class SubtitleDownload(QtCore.QThread):
         self._movie_paths = movie_paths
         self.start()
         
-#    def __del__(self):
-#       self.wait()
- 
+    def __del__(self):
+        self.logout()
+        
     def stopTask(self):
         self.stopping = True
 
@@ -182,12 +182,15 @@ class SubtitleDownload(QtCore.QThread):
                             return
 
         try:
-            self.login()
-            self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Searching for subtitles...")
-            self.search_subtitles()
-            self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Done...")
-            my_logger.debug("Done...")
-            self.logout()
+            if self.moviefiles:
+                if not self.login_token:
+                    self.login()
+                self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Searching for subtitles...")
+                self.search_subtitles()
+                self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Done...")
+                my_logger.debug("Done...")
+            else:
+                self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, no video files were found!")
             self.emit(QtCore.SIGNAL("downloadComplete(PyQt_PyObject)"),self._movie_paths)
 
         except Error as e:
@@ -197,6 +200,8 @@ class SubtitleDownload(QtCore.QThread):
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), uw)
 
     def calcfilestats(self, file, parentdir):
+        ''' Calculates and adds the hash of a movie file to the moviefiles dictionary.
+            Also emits a signal to update the LCD counter showing the found files.'''
         video_extns = [ '.avi', '.divx', '.mkv', '.mp4', '.ogg', '.rm', '.rmvb', '.vob', '.x264', '.xvid']
 
         if os.path.splitext(file)[1].lower() in video_extns:

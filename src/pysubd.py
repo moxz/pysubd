@@ -6,6 +6,7 @@ import os, sys
 import struct
 import base64
 import zlib
+from socket import gaierror as noInternetConnection
 
 import logging.handlers
 
@@ -184,11 +185,16 @@ class SubtitleDownload(QtCore.QThread):
         try:
             if self.moviefiles:
                 if not self.login_token:
-                    self.login()
-                self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Searching for subtitles...")
-                self.search_subtitles()
-                self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Done...")
-                my_logger.debug("Done...")
+                    try:
+                        self.login()
+                    except (noInternetConnection):
+                        self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"),"Sorry, No active Internet connection found. Re-Check and try again.")
+                        my_logger.debug("Sorry, No active Internet connection found. Re-Check and try again.")
+                    else:
+                        self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Searching for subtitles...")
+                        self.search_subtitles()
+                        self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Done...")
+                        my_logger.debug("Done...")
             else:
                 self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, no video files were found!")
             self.emit(QtCore.SIGNAL("downloadComplete(PyQt_PyObject)"),self._movie_paths)

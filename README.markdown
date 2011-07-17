@@ -15,11 +15,11 @@ Just Drag & Drop your drive(s)/folder(s)/video file(s) into the program window.
 Alternatively you can simply use the browse button to select the video files and directories, and click the "Open" button.
 Sit back and relax, while pysubd finds and downloads the best "eng" language subs for you!
 
-
 Author
 ------
 Sahil Gupta
+Mail in your in feedback, bug reports or feature suggestions to sahilgupt29@gmail.com.
+Did PySubD save you some precious time? If Yes, then send in your donations through PayPal to sahilgupta29@gmail.com
 
-Send in bug reports, feature suggestions or plain feedbacks to sahilgupt29@gmail.com.
-
-PySubD is free software. Source code can be found at https://github.com/sahilgupta/pysubd/
+PySubD is powered by the awesome subtitles service provided by www.OpenSubtitles.org, Kindly consider donating to them as well.
+This is a free and open source software. Source code can be obtained at https://github.com/sahilgupta/pysubd/

@@ -23,3 +23,13 @@ Did PySubD save you some precious time? If Yes, then send in your donations thro
 
 PySubD is powered by the awesome subtitles service provided by www.OpenSubtitles.org, Kindly consider donating to them as well.
 This is a free and open source software. Source code can be obtained at https://github.com/sahilgupta/pysubd/
+
+Changelog
+---------
+v1.0
+Major upgrade. PySubD now takes into account, reputation of the uploader while choosing the best subtitles for your movies.
+
+v0.95
+PySubD is now out Beta. Now log-in and log-out is done only once per execution compared to multiple times earlier.
+Made a few log messages more informative.
+

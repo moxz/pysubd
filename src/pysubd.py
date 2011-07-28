@@ -228,7 +228,7 @@ class SubtitleDownload(QtCore.QThread):
         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Logging in...")
         my_logger.debug("Logging in...")
         try:
-            resp = self.server.LogIn('', '', 'en', 'OS Test User Agent')
+            resp = self.server.LogIn('', '', 'en', 'PySubD v1.0')
             self.check_status(resp)
             self.login_token = resp['token']
         except Error as e:

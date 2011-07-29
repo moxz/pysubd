@@ -26,6 +26,9 @@ This is a free and open source software. Source code can be obtained at https://
 
 Changelog
 ---------
+v1.1
+Includes a few bug fixes.
+
 v1.0
 Major upgrade. PySubD now takes into account, reputation of the uploader while choosing the best subtitles for your movies.
 

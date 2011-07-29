@@ -192,11 +192,13 @@ class SubtitleDownload(QtCore.QThread):
                     except (noInternetConnection):
                         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, No active Internet connection found. Re-Check and try again.")
                         my_logger.debug("Sorry, No active Internet connection found. Re-Check and try again.")
-                    else:
-                        self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Searching for subtitles...")
-                        self.search_subtitles()
-                        self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Done...")
-                        my_logger.debug("Done...")
+                        self.emit(QtCore.SIGNAL("downloadComplete(PyQt_PyObject)"),self._movie_paths)
+                        return
+                    
+                self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Searching for subtitles...")
+                self.search_subtitles()
+                self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Done...")
+                my_logger.debug("Done...")
             else:
                 self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, no video files were found!")
             self.emit(QtCore.SIGNAL("downloadComplete(PyQt_PyObject)"),self._movie_paths)

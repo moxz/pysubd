@@ -159,10 +159,11 @@ class SubtitleDownload(QtCore.QThread):
     def init(self, movie_paths):
         self._movie_paths = movie_paths
         self.start()
- 
+
     def __del__(self):
-        self.logout()
-        
+        if self.login_token:
+            self.logout()
+
     def stopTask(self):
         self.stopping = True
 
@@ -192,16 +193,16 @@ class SubtitleDownload(QtCore.QThread):
                     except (noInternetConnection):
                         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, No active Internet connection found. Re-Check and try again.")
                         my_logger.debug("Sorry, No active Internet connection found. Re-Check and try again.")
-                        self.emit(QtCore.SIGNAL("downloadComplete(PyQt_PyObject)"),self._movie_paths)
+                        self.emit(QtCore.SIGNAL("downloadComplete(PyQt_PyObject)"), self._movie_paths)
                         return
-                    
+
                 self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Searching for subtitles...")
                 self.search_subtitles()
                 self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Done...")
                 my_logger.debug("Done...")
             else:
                 self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, no video files were found!")
-            self.emit(QtCore.SIGNAL("downloadComplete(PyQt_PyObject)"),self._movie_paths)
+            self.emit(QtCore.SIGNAL("downloadComplete(PyQt_PyObject)"), self._movie_paths)
 
         except Error as e:
             self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), ("XML-RPC error:", e))
@@ -267,15 +268,16 @@ class SubtitleDownload(QtCore.QThread):
                 else:
                         return
 
-	#Check if we actually got some matching subtitles to download, else return
-	if not resp['data']:
-		self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, no subtitles were found!")
-		my_logger.debug("Sorry, no subtitles were found!")
-		return
-	#User Ranks on OpenSubtitles.org.These are decided based upon the number of subtitles uploaded by the member.
-	#A better rank is often an indication of a better subtitle quality.
-        user_ranks =   {'admin': 1, 'platinum member': 2, 'vip member': 3, 'gold member': 4, 'trusted': 5, 'silver member': 6,
-                         'bronze member': 7, 'sub leecher': 8, '': 9 }
+        #Check if we actually got some matching subtitles to download, else return
+        if not resp['data']:
+            self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Sorry, no subtitles were found!")
+            my_logger.debug("Sorry, no subtitles were found!")
+            return
+
+        #User Ranks on OpenSubtitles.org.These are decided based upon the number of subtitles uploaded by the member.
+        #A better rank is often an indication of a better subtitle quality.
+        user_ranks = {'admin': 1, 'platinum member': 2, 'vip member': 3, 'gold member': 4, 'trusted': 5, 'silver member': 6,
+                         'bronze member': 7, 'sub leecher': 8, '': 9}
         # A dictionary to store the subtitle id's found corresponding to every file hash
         subtitles = {}
         for result in resp['data']:
@@ -286,24 +288,24 @@ class SubtitleDownload(QtCore.QThread):
                 downcount = result['SubDownloadsCnt']
                 rating = result['SubRating']
                 user_rank = user_ranks[result['UserRank']]
-                
+
                 #First good matching subtitle found
                 if not subtitles.get(hash):
-                    subtitles[hash] = {'subid':subid, 'downcount':downcount, 'rating':rating ,'user_rank':user_rank}
+                    subtitles[hash] = {'subid': subid, 'downcount': downcount, 'rating': rating, 'user_rank': user_rank}
                     self.emit(QtCore.SIGNAL("updateAvailable()"))
 
                 #Another good quality subtitle found uploaded by a more reputed user
                 elif subtitles[hash]['user_rank'] > user_rank:
-                    subtitles[hash] = {'subid':subid, 'downcount':downcount, 'rating':rating,'user_rank':user_rank}
+                    subtitles[hash] = {'subid': subid, 'downcount': downcount, 'rating': rating, 'user_rank': user_rank}
 
                 #Another good quality subtitle found with a perfect rating, uploaded by a more or equally reputed user
                 elif float(rating) == 10.0 and subtitles[hash]['user_rank'] >= user_rank:
-                    subtitles[hash] = {'subid':subid, 'downcount':downcount, 'rating':rating,'user_rank':user_rank}
+                    subtitles[hash] = {'subid': subid, 'downcount': downcount, 'rating': rating, 'user_rank': user_rank}
 
-                #Another good quality subtitle found with the better rating, higher download count and uploaded by a more or equally trusted user 
+                #Another good quality subtitle found with the better rating, higher download count and uploaded by a more or equally trusted user
                 elif float(subtitles[hash]['rating']) >= float(rating) \
-			 and int(subtitles[hash]['downcount']) < int(downcount) and subtitles[hash]['user_rank'] >= user_rank:
-                    subtitles[hash] = {'subid':subid, 'downcount':downcount, 'rating':rating,'user_rank':user_rank}
+                and int(subtitles[hash]['downcount']) < int(downcount) and subtitles[hash]['user_rank'] >= user_rank:
+                    subtitles[hash] = {'subid': subid, 'downcount': downcount, 'rating': rating, 'user_rank': user_rank}
 
         my_logger.debug("Total number of subtitles found: " + str(len(subtitles)))
 
@@ -314,17 +316,17 @@ class SubtitleDownload(QtCore.QThread):
                     try:
                         subtitle = self.download_subtitles([subtitles[hash]['subid']])
                         self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "Saving subtitle for: " + filedetails['file'])
-			my_logger.debug("Saving subtitle for: " + filedetails['file'] + "  Hash : " + hash + " Rating: " +
-			       subtitles[hash]['rating'] + " DwnCnt: " + subtitles[hash]['downcount'] + " UpldrRnk:" + \
-			       str(subtitles[hash]['user_rank']))
+                        my_logger.debug("Saving subtitle for: " + filedetails['file'] + "  Hash : " + hash + " Rating: " +
+                                        subtitles[hash]['rating'] + " DwnCnt: " + subtitles[hash]['downcount'] + " UpldrRnk:" + \
+                                        str(subtitles[hash]['user_rank']))
                         self.emit(QtCore.SIGNAL("updateDownloaded()"))
                         filename = os.path.join(filedetails['dir'], os.path.splitext(filedetails['file'])[0] + ".srt")
                         file = open(filename, "wb")
                         file.write(subtitle)
                         file.close()
                     except IOError:
-                        self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "IO Error in saving subs for  "+ filedetails['file'])
-                        
+                        self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "IO Error in saving subs for  " + filedetails['file'])
+
                 else:
                     notfound.append(filedetails['file'])
             else:
@@ -334,7 +336,7 @@ class SubtitleDownload(QtCore.QThread):
         notfound.sort(key=str.lower)
         for file in notfound:
                 self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "No subtitles found for: " + file)
-		my_logger.debug("No subtitles were found for: " + file)
+        my_logger.debug("No subtitles were found for: " + file)
 
     def download_subtitles(self, subparam):
         resp = self.server.DownloadSubtitles(self.login_token, subparam)
@@ -345,7 +347,6 @@ class SubtitleDownload(QtCore.QThread):
 
     def check_status(self, resp):
         '''Check the return status of the request.
-        
         Anything other than "200 OK" raises a UserWarning
         '''
         if resp['status'].upper() != '200 OK':
@@ -372,7 +373,7 @@ class SubtitleDownload(QtCore.QThread):
                 buffer = f.read(bytesize)
                 (l_value,) = struct.unpack(longlongformat, buffer)
                 hash += l_value
-                hash = hash & 0xFFFFFFFFFFFFFFFF #to remain as 64bit number
+                hash = hash & 0xFFFFFFFFFFFFFFFF  # to remain as 64bit number
 
             f.seek(max(0, filesize - 65536), 0)
             for x in range(65536 // bytesize):

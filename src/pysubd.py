@@ -336,7 +336,7 @@ class SubtitleDownload(QtCore.QThread):
         notfound.sort(key=str.lower)
         for file in notfound:
                 self.emit(QtCore.SIGNAL("updategui(PyQt_PyObject)"), "No subtitles found for: " + file)
-        my_logger.debug("No subtitles were found for: " + file)
+                my_logger.debug("No subtitles were found for: " + file)
 
     def download_subtitles(self, subparam):
         resp = self.server.DownloadSubtitles(self.login_token, subparam)

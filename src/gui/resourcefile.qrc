@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="/">
+    <file>images/Pi-symbol.svg</file>
+  </qresource>
+</RCC>

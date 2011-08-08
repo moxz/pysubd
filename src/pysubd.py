@@ -1,7 +1,7 @@
 #TODO:case of no internet connection or  a midway disconnection
 
 from PyQt4 import QtCore, QtGui
-from gui import  Ui_MainWindow
+from gui.mainwindow_ui import  Ui_MainWindow
 import os
 import sys
 import struct
@@ -19,6 +19,11 @@ handler = logging.handlers.RotatingFileHandler(
               LOG_FILENAME, maxBytes=150000)
 
 my_logger.addHandler(handler)
+
+import platform
+if platform.system()=='Windows' and platform.release()=='7':
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('pysubd')
 
 if sys.version_info[0] == 3:
     from xmlrpc.client import ServerProxy, Error

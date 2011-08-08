@@ -34,6 +34,10 @@
   <property name="windowTitle">
    <string>pysubd</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="resourcefile.qrc">
+    <normaloff>:/images/Pi-symbol.svg</normaloff>:/images/Pi-symbol.svg</iconset>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <property name="acceptDrops">
     <bool>true</bool>
@@ -82,7 +86,7 @@
      </layout>
     </widget>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>603</x>
@@ -175,6 +179,8 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
- <resources/>
+ <resources>
+  <include location="resourcefile.qrc"/>
+ </resources>
  <connections/>
 </ui>

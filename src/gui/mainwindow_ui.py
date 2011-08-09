@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'mainwindow.ui'
 #
-# Created: Tue Aug  9 19:26:42 2011
+# Created: Tue Aug 09 23:28:29 2011
 #      by: PyQt4 UI code generator 4.8.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -17,14 +17,14 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(720, 335)
+        MainWindow.resize(720, 346)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
         MainWindow.setSizePolicy(sizePolicy)
-        MainWindow.setMinimumSize(QtCore.QSize(720, 335))
-        MainWindow.setMaximumSize(QtCore.QSize(720, 335))
+        MainWindow.setMinimumSize(QtCore.QSize(720, 346))
+        MainWindow.setMaximumSize(QtCore.QSize(720, 346))
         MainWindow.setAcceptDrops(True)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/images/Pi-symbol.svg")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -33,12 +33,14 @@ class Ui_MainWindow(object):
         self.centralwidget.setAcceptDrops(True)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.scrollArea = QtGui.QScrollArea(self.centralwidget)
-        self.scrollArea.setGeometry(QtCore.QRect(10, 10, 591, 301))
+        self.scrollArea.setGeometry(QtCore.QRect(10, 10, 591, 311))
         self.scrollArea.setAcceptDrops(True)
+        self.scrollArea.setFrameShadow(QtGui.QFrame.Plain)
+        self.scrollArea.setLineWidth(0)
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName(_fromUtf8("scrollArea"))
         self.scrollAreaWidgetContents = QtGui.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 587, 297))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 589, 309))
         self.scrollAreaWidgetContents.setObjectName(_fromUtf8("scrollAreaWidgetContents"))
         self.verticalLayout_2 = QtGui.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
@@ -49,6 +51,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.progressUpdate.sizePolicy().hasHeightForWidth())
         self.progressUpdate.setSizePolicy(sizePolicy)
         self.progressUpdate.setMaximumSize(QtCore.QSize(720, 16777215))
+        self.progressUpdate.setLineWidth(0)
         self.progressUpdate.setObjectName(_fromUtf8("progressUpdate"))
         self.verticalLayout_2.addWidget(self.progressUpdate)
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
@@ -89,9 +92,13 @@ class Ui_MainWindow(object):
         self.downloadedlcdNumber.setNumDigits(5)
         self.downloadedlcdNumber.setObjectName(_fromUtf8("downloadedlcdNumber"))
         self.verticalLayout.addWidget(self.downloadedlcdNumber)
+        self.authorLabel = QtGui.QLabel(self.centralwidget)
+        self.authorLabel.setGeometry(QtCore.QRect(620, 310, 81, 20))
+        self.authorLabel.setMinimumSize(QtCore.QSize(0, 0))
+        self.authorLabel.setObjectName(_fromUtf8("authorLabel"))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 720, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 720, 21))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtGui.QStatusBar(MainWindow)
@@ -108,5 +115,10 @@ class Ui_MainWindow(object):
         self.label.setText(QtGui.QApplication.translate("MainWindow", "Total files found:", None, QtGui.QApplication.UnicodeUTF8))
         self.label_2.setText(QtGui.QApplication.translate("MainWindow", "Available Subs:", None, QtGui.QApplication.UnicodeUTF8))
         self.label_3.setText(QtGui.QApplication.translate("MainWindow", "Downloaded:", None, QtGui.QApplication.UnicodeUTF8))
+        self.authorLabel.setText(QtGui.QApplication.translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">By </span><a href=\"https://github.com/sahilgupta/\"><span style=\" font-size:8pt; text-decoration: underline; color:#0000ff;\">Sahil Gupta</span></a></p></body></html>", None, QtGui.QApplication.UnicodeUTF8))
 
 import resourcefile_rc

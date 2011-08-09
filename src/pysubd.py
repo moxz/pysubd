@@ -79,6 +79,7 @@ class pysubd(QtGui.QMainWindow):
         QtCore.QObject.connect(self.ui.browseButton, QtCore.SIGNAL("clicked()"), self.openFileDialog)
 
         self.cancelled = False
+        self.ui.authorLabel.setOpenExternalLinks(True)
         self.ui.cancelButton.setDisabled(True)
 
     def dragEnterEvent(self, event):

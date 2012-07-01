@@ -282,7 +282,7 @@ class SubtitleDownload(QtCore.QThread):
 
         #User Ranks on OpenSubtitles.org.These are decided based upon the number of subtitles uploaded by the member.
         #A better rank is often an indication of a better subtitle quality.
-        user_ranks = {'admin': 1, 'platinum member': 2, 'vip member': 3, 'gold member': 4, 'trusted': 5, 'silver member': 6,
+        user_ranks = {'administrator': 1, 'platinum member': 2, 'vip member': 3, 'gold member': 4, 'trusted': 5, 'silver member': 6,
                          'bronze member': 7, 'sub leecher': 8, '': 9}
         # A dictionary to store the subtitle id's found corresponding to every file hash
         subtitles = {}

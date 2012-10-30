@@ -1,9 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import QObject, pyqtSlot
-from gui.mainwindow_ui import Ui_MainWindow
 from gui.widgets import FileDialog
 from SubtitleDownload import SubtitleDownload
 import sys
@@ -20,8 +19,7 @@ class PySubD(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
+        self.ui = uic.loadUi('gui/mainwindow.ui', self)
         self.tobeSearched = []
         self.ui.progressUpdate.append('-----------------------------------PySubD Subtitle Downloader-----------------------------------'
                 )

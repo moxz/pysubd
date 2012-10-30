@@ -184,7 +184,7 @@ def calc_file_hash(filepath):
         raise
 
 
-def download_url_content(url, referer=None, timeout=5):
+def download_url_content(url, referer=None, timeout=10):
     ''' Downloads and returns the contents of the given url.'''
 
     logger.debug('Downloading contents of %s' % url)

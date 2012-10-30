@@ -45,7 +45,15 @@ class SubtitleDownload(QtCore.QThread):
         utils.communicator.updategui.emit('Searching for video files...'
                 )
         self.check_and_add()
-        self.process_queue()
+        try:
+            self.process_queue()
+        except utils.NoInternetConnectionFound:
+            utils.communicator.updategui.emit('No active Internet connection found. Kindly check and try again.'
+                    )
+        except:
+            self.logger.exception('Unknown Exception')
+            utils.communicator.updategui.emit('Following exception occured:\n%s'
+                 % traceback.format_exc())
         self.print_not_found()
         utils.communicator.updategui.emit('Done...')
         utils.communicator.all_download_complete.emit(self.videos_pathlist)
@@ -89,11 +97,6 @@ class SubtitleDownload(QtCore.QThread):
         try:
             self.sites[site].process(files, self.lang)
             self.sites[site].wait()
-        except utils.NoInternetConnectionFound:
-            utils.communicator.updategui.emit('No active Internet connection found. Kindly check and try again.'
-                    )
-            utils.communicator.all_download_complete.emit(self.videos_pathlist)
-            return
         except utils.IncorrectResponseRecieved:
             utils.communicator.updategui.emit('Exception: IncorrectResponseRecieved'
                     )
@@ -101,10 +104,6 @@ class SubtitleDownload(QtCore.QThread):
             utils.communicator.updategui.emit(uw)
         except utils.DailyDownloadLimitExceeded:
             utils.communicator.updategui.emit('You have reached your daily download limit for Addic7ed.com')
-        except:
-            self.logger.exception('Unknown Exception')
-            utils.communicator.updategui.emit('Following exception occured:\n%s'
-                     % traceback.format_exc())    
 
     def process_queue(self):
         addic7ed_list = []

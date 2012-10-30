@@ -9,6 +9,7 @@ import struct
 import requests
 from PyQt4.QtCore import QObject, pyqtSignal
 from operator import itemgetter
+import socket
 
 
 class NoInternetConnectionFound(Exception):
@@ -30,6 +31,7 @@ class Communicator(QObject):
     downloaded_sub = pyqtSignal()  # to pysubd from others
     updategui = pyqtSignal(object)  # to pysubd from SubD addic and opensubs
     no_sub_found = pyqtSignal(object)  # to SUbD from others
+    reprocess = pyqtSignal(object) #from opensubs to SubtitleDownload
 
 
 communicator = Communicator()
@@ -56,7 +58,10 @@ def get_logger():
 
     LOG_FILENAME = 'PySubD.log'
     logger = logging.getLogger('PySubDLogger')
-    logger.setLevel(logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(funcName)s %(levelname)-8s %(message)s',
+                        datefmt='%a, %d %b %Y %H:%M:%S',
+                        filename=LOG_FILENAME, filemode='a')
     handler = logging.handlers.RotatingFileHandler(LOG_FILENAME,
             maxBytes=50000)
     logger.addHandler(handler)
@@ -96,7 +101,8 @@ def is_video_file(filename):
 def clean_name(name):
     ''' Cleans the file name of non alpha numeric characters and extra spaces.'''
 
-    name = re.sub(r"[^\w\s]", ' ', unicode(name.lower()))
+    # pattern = re.compile('[\W_]+')
+    name = re.sub('[\W_]+', ' ', unicode(name.lower()))
     name = re.sub(r"\s+", ' ', name)
     return name
 
@@ -104,37 +110,39 @@ def clean_name(name):
 def guess_file_data(filename):
     filename = clean_name(filename)
     matches_tvshow = tv_show_regex.match(filename)
-    if matches_tvshow:
+    matches_movie = movie_regex.match(filename)
+
+    if matches_tvshow and not matches_movie :
         (tvshow, season, episode, teams) = matches_tvshow.groups()
         teams = teams.split()
-        return {
-            'type': 'tvshow',
-            'name': tvshow.strip(),
-            'season': int(season),
-            'episode': int(episode),
+        data = {
+                'type': 'tvshow',
+                'name': tvshow.strip(),
+                'season': int(season),
+                'episode': int(episode),
+                'teams': teams,
+                }
+    elif matches_movie:
+        (movie, year, teams) = matches_movie.groups()
+        teams = teams.split()
+        part = None
+        if 'cd1' in teams:
+            teams.remove('cd1')
+            part = 1
+        if 'cd2' in teams:
+            teams.remove('cd2')
+            part = 2
+        data = {
+            'type': 'movie',
+            'name': movie.strip(),
+            'year': year,
             'teams': teams,
+            'part': part,
             }
     else:
-        matches_movie = movie_regex.match(filename)
-        if matches_movie:
-            (movie, year, teams) = matches_movie.groups()
-            teams = teams.split()
-            part = None
-            if 'cd1' in teams:
-                teams.remove('cd1')
-                part = 1
-            if 'cd2' in teams:
-                teams.remove('cd2')
-                part = 2
-            return {
-                'type': 'movie',
-                'name': movie.strip(),
-                'year': year,
-                'teams': teams,
-                'part': part,
-                }
-        else:
-            return {'type': 'unknown', 'name': filename, 'teams': []}
+            data = {'type': 'unknown', 'name': filename, 'teams': []}
+    logger.debug('Guessed data %s'%data)
+    return data
 
 
 def calc_file_hash(filepath):
@@ -187,7 +195,7 @@ def download_url_content(url, referer=None, timeout=5):
     try:
         x = requests.get(url, headers=request_headers, timeout=timeout,
                          prefetch=True)
-    except requests.exceptions.Timeout:
+    except (requests.exceptions.Timeout, timeout, socket.timeout):
         raise NoInternetConnectionFound
 
     if x.status_code != 200:
@@ -208,7 +216,7 @@ def save_subs(content, full_path, other_details=None):
 
 
 def multikeysort(items, columns):
-    '''Sorts a list a of dicitionary based on multiple keys.
+    '''Sorts a list a of dictionary based on multiple keys.
        A column can be reverse sorted by specifying - in front of the field name.'''
 
     comparers = [((itemgetter(col[1:].strip()),

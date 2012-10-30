@@ -71,20 +71,30 @@ class Addic7ed(QtCore.QThread):
         self.stopping = False
 
     def process(self, files_list, lang='English'):
-        ''' Accepts filename and the wished language, searches and downloads best relevant subtitles found'''
+        '''Given filename and the wished language, searches and downloads the best match found from Addic7ed.com'''
 
         self.lang = lang
         utils.communicator.updategui.emit('Querying Addic7ed.com...')
-        for details_dict in files_list:
+
+        for details_dict in files_list[:]:
             if not self.stopping:
                 filename = details_dict['file_name']
                 save_to = details_dict['save_subs_to']
 
                 (searched_url, downloadlink) = self._query(filename)
                 if downloadlink:
-                    subs = self.download_subtitles(searched_url,
-                            downloadlink, filename)
+                    try:
+                        subs = self.download_subtitles(searched_url,
+                                downloadlink, filename)
+                    except utils.DailyDownloadLimitExceeded:
+                        for details_dict in files_list:
+                            utils.communicator.reprocess.emit(details_dict)
+                        raise
                     utils.save_subs(subs, save_to)
+                    files_list.remove(details_dict)
+                    utils.communicator.downloaded_sub.emit()
+                else:
+                    utils.communicator.reprocess.emit(details_dict)
 
     def stopTask(self):
         self.stopping = True
@@ -120,13 +130,14 @@ class Addic7ed(QtCore.QThread):
         best_match = None
 
         page_html = utils.download_url_content(searchurl)
-
+        if not page_html.strip():
+            return (searchurl, None)
         soup = BeautifulSoup(page_html)
         release_pattern = \
             re.compile('Version (.+), ([0-9]+).([0-9])+ MBs')
+
         try:
-            sub_list = soup.findAll('td', {'class': 'NewsTitle',
-                                    'colspan': '3'})
+            sub_list = soup.findAll('td', {'class': 'NewsTitle','colspan': '3'})
             result = []
 
             for subs in sub_list:
@@ -169,10 +180,7 @@ class Addic7ed(QtCore.QThread):
             utils.communicator.updategui.emit('Following unknown exception occured:\n%s'
                      % traceback.format_exc())
         else:
-            if not result:
-                utils.communicator.no_sub_found.emit(filename)
-            else:
-
+            if result:
                 # Sort the results found by completed, overlapping, best_match
 
                 best_match = sorted(result, key=itemgetter('completed',
@@ -181,7 +189,7 @@ class Addic7ed(QtCore.QThread):
                 self.logger.debug('A best match subtitle for %s found at %s'
                                    % (searchurl, best_match.get('link',
                                   None)))
-        return (searchurl, best_match.get('link', None))
+        return (searchurl, best_match.get('link') if best_match else None)
 
     def download_subtitles(
         self,
@@ -208,6 +216,7 @@ class OpenSubtitles(QtCore.QThread):
 
     def process(self, files_list, lang='English'):
         self.moviefiles = files_list
+        self.imdbid_to_hash = {}
         self.lang = LANGUAGES[lang][1]
         self.start()
 
@@ -269,81 +278,75 @@ class OpenSubtitles(QtCore.QThread):
                 return
         return results
 
-    def clean_results(self, results):
+    def clean_results(self, results, imdb=False):
         subtitles = {}
         user_ranks = {  'administrator': 1,
-                            'platinum member': 2,
-                            'vip member': 3,
-                            'gold member': 4,
-                            'trusted': 5,
-                            'silver member': 6,
-                            'bronze member': 7,
-                            'sub leecher': 8,
-                            '': 9, }
+                        'platinum member': 2,
+                        'vip member': 3,
+                        'gold member': 4,
+                        'trusted': 5,
+                        'silver member': 6,
+                        'bronze member': 7,
+                        'sub leecher': 8,
+                        '': 9, }
 
         for result in results:
-            if result['SubBad'] != '1':  # TODO: verify the change
-                if not result.get(result['MovieHash']):
+            if result['SubBad'] != '1':
+                movie_hash = result.get('MovieHash')
+                if not movie_hash:
                     movie_hash = self.imdbid_to_hash[int(result['IDMovieImdb'])]
                 subid = result['IDSubtitleFile']
                 downcount = int(result['SubDownloadsCnt'])
                 rating = float(result['SubRating'])
                 user_rank = user_ranks[result['UserRank']]
 
+                if imdb:
+                    cleaned_release_name = utils.clean_name(result['MovieReleaseName'])
+                    file_name = self.moviefiles[movie_hash]['file_name']
+                    cleaned_file_name = utils.clean_name(file_name)
+                    overlap = len(set.intersection(set(cleaned_release_name), set(cleaned_file_name)))
+                else:
+                    overlap = 0
+
                 subtitles.setdefault(movie_hash, []).append({
                     'subid': subid,
                     'downcount': downcount,
                     'rating': rating,
                     'user_rank': user_rank,
+                    'overlap' : overlap
                     })
 
         return subtitles
 
     def search_subtitles(self):
         search = []
+
         for video_file_details in self.moviefiles.itervalues():
             video_file_details['sublanguageid'] = self.lang
             search.append(video_file_details)
         
         results = self._query_opensubs(search)
-
         subtitles = self.clean_results(results)
-        self.imdbid_to_hash = {}
-
 
         for (hash, found_matches) in subtitles.iteritems():
             subtitles[hash] = utils.multikeysort(found_matches,
-                    ['user_rank', '-rating', '-downcount'])[0]
+                    ['overlap', 'user_rank', '-rating', '-downcount'])[0]
 
-        not_found = []
-        
         for (hash, filedetails) in self.moviefiles.iteritems():
             if not self.stopping:
                 if subtitles.get(hash):
-                    print 'found subs for %s'%filedetails['save_subs_to']
-                    # subtitle = \
-                    #     self.download_subtitles([subtitles[hash]['subid'
-                    #         ]])
-                    # #TODO: Make this single API call!
-                    # utils.communicator.downloaded_sub.emit()
-                    # utils.save_subs(subtitle, filedetails['save_subs_to'],
-                    #                 subtitles[hash])
+                    utils.communicator.updategui.emit('Saving subtitles for %s'%filedetails['file_name'])
+                    subtitle = \
+                        self.download_subtitles([subtitles[hash]['subid'
+                            ]])
+                    utils.communicator.downloaded_sub.emit()
+                    utils.save_subs(subtitle, filedetails['save_subs_to'],
+                                    subtitles[hash])
                 else:
-                    not_found.append(hash)
+                    utils.communicator.no_sub_found.emit(filedetails['file_name'])
             else:
                 return
-        info =  self.server.CheckMovieHash(self.login_token, not_found)['data']
 
-        to_be_searched = []
-
-        for movie_hash, result in info.iteritems():
-            if result:
-                self.imdbid_to_hash[int(result['MovieImdbID'])] = movie_hash
-                to_be_searched.append({'imdbid': result['MovieImdbID'], 'sublanguageid' : self.lang})
-        print self.imdbid_to_hash       
-        results  = self._query_opensubs(to_be_searched)
-        print self.clean_results(results)
-        
 
     def download_subtitles(self, subparam):
         resp = self.server.DownloadSubtitles(self.login_token, subparam)

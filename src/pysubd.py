@@ -110,12 +110,12 @@ class PySubD(QtGui.QMainWindow):
             self.subd.init(self.tobeSearched, self.lang)
         else:
             self.ui.cancelButton.setDisabled(True)
-            self.ui.lang_selector.setEnabled(True) 
+            self.ui.lang_selector.setEnabled(True)
             self.ui.browseButton.setEnabled(True)
 
     @pyqtSlot(object)
     def append_updates(self, update):
-        logger.debug(update)
+        logger.info(update)
         self.ui.progressUpdate.append(update)
         self.ui.scrollArea.verticalScrollBar().setValue(self.ui.scrollArea.verticalScrollBar().maximum())
 

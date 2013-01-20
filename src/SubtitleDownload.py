@@ -6,7 +6,7 @@ import os
 import traceback
 from opensubs import Site
 import utils
-from PyQt4.QtCore import QObject, pyqtSlot
+from PyQt4.QtCore import pyqtSlot
 from Queue import Queue
 
 communicator = utils.communicator
@@ -42,21 +42,21 @@ class SubtitleDownload(QtCore.QThread):
     def run(self):
         self.cancelled = False
         self.videofiles_queue = {}
-        utils.communicator.updategui.emit('Searching for video files...'
+        communicator.updategui.emit('Searching for video files...', 'info'
                 )
         self.check_and_add()
         try:
             self.process_queue()
         except utils.NoInternetConnectionFound:
-            utils.communicator.updategui.emit('No active Internet connection found. Kindly check and try again.'
-                    )
+            communicator.updategui.emit('No active Internet connection found. Kindly check and try again.',
+                    'error')
         except:
             self.logger.exception('Unknown Exception')
-            utils.communicator.updategui.emit('Following exception occured:\n%s'
-                 % traceback.format_exc())
+            communicator.updategui.emit('An unknown exception occured:\n%s'
+                 % traceback.format_exc(), 'error')
         self.print_not_found()
-        utils.communicator.updategui.emit('Done...')
-        utils.communicator.all_download_complete.emit(self.videos_pathlist)
+        communicator.updategui.emit('Done...', 'info')
+        communicator.all_download_complete.emit(self.videos_pathlist)
         
     def check_and_add(self):
         for path in self.videos_pathlist:
@@ -75,8 +75,8 @@ class SubtitleDownload(QtCore.QThread):
                             return
 
     def add_to_processing_queue(self, filename, parentdir):
-        utils.communicator.updategui.emit('Found: ' + filename)
-        utils.communicator.found_video_file.emit(filename)
+        communicator.updategui.emit('Found: %s'% filename, 'info')
+        communicator.found_video_file.emit(filename)
 
         filehash = utils.calc_file_hash(os.path.join(parentdir,
                 filename))
@@ -98,12 +98,12 @@ class SubtitleDownload(QtCore.QThread):
             self.sites[site].process(files, self.lang)
             self.sites[site].wait()
         except utils.IncorrectResponseRecieved:
-            utils.communicator.updategui.emit('Exception: IncorrectResponseRecieved'
+            communicator.updategui.emit('Exception: IncorrectResponseRecieved', 'error'
                     )
         except UserWarning, uw:
-            utils.communicator.updategui.emit(uw)
+            communicator.updategui.emit(uw, 'error')
         except utils.DailyDownloadLimitExceeded:
-            utils.communicator.updategui.emit('You have reached your daily download limit for Addic7ed.com')
+            communicator.updategui.emit('You have reached your daily download limit for Addic7ed.com', 'error')
 
     def process_queue(self):
         addic7ed_list = []
@@ -131,4 +131,5 @@ class SubtitleDownload(QtCore.QThread):
     def print_not_found(self):
         self.not_found.sort(key=str.lower)
         for file_name in self.not_found:
-            utils.communicator.updategui.emit('No subtitles found for: ' + file_name)
+            communicator.updategui.emit('No subtitles found for: %s'% file_name, 'error')
+        self.not_found = []

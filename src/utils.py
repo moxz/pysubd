@@ -29,7 +29,7 @@ class Communicator(QObject):
     all_download_complete = pyqtSignal(object)  # to pysubd from SubD
     found_video_file = pyqtSignal(object)  # to pysubd from SubD
     downloaded_sub = pyqtSignal()  # to pysubd from others
-    updategui = pyqtSignal(object)  # to pysubd from SubD addic and opensubs
+    updategui = pyqtSignal(object, object)  # to pysubd from SubD addic and opensubs
     no_sub_found = pyqtSignal(object)  # to SUbD from others
     reprocess = pyqtSignal(object) #from opensubs to SubtitleDownload
 

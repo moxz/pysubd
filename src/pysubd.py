@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from PyQt4 import QtCore, QtGui, uic
-from PyQt4.QtCore import QObject, pyqtSlot
+from PyQt4.QtCore import pyqtSlot
 from gui.widgets import FileDialog
 from SubtitleDownload import SubtitleDownload
 import sys
@@ -21,10 +21,11 @@ class PySubD(QtGui.QMainWindow):
         QtGui.QWidget.__init__(self, parent)
         self.ui = uic.loadUi('gui/mainwindow.ui', self)
         self.tobeSearched = []
-        self.ui.progressUpdate.append('-----------------------------------PySubD Subtitle Downloader-----------------------------------'
-                )
-        self.ui.progressUpdate.append('----------------------Drag and drop your movie files or folders here------------------------'
-                )
+        self.ui.progressUpdate.append('''<p align="center" style=" margin-top:0px; margin-bottom:0px; 
+                                        margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">
+                                        <span style=" font-size:14pt; font-weight:400;">PySubD Subtitle Downloader</span>
+                                        <br>
+                                       Drag and drop your movie files or folders here</p><p></p>''')
         self.subd = SubtitleDownload()
         
         self.connect(self.subd, QtCore.SIGNAL('updateAvailable()'),
@@ -111,8 +112,15 @@ class PySubD(QtGui.QMainWindow):
             self.ui.lang_selector.setEnabled(True)
             self.ui.browseButton.setEnabled(True)
 
-    @pyqtSlot(object)
-    def append_updates(self, update):
+    @pyqtSlot(object, object)
+    def append_updates(self, text, update_type):
+        if update_type == 'info':
+            color = 'black'
+        elif update_type == 'error':
+            color = 'red'
+        elif update_type == 'success':
+            color = 'green'
+        update = '''<span style="color: %s;">%s</span>'''%(color, text)
         logger.info(update)
         self.ui.progressUpdate.append(update)
         self.ui.scrollArea.verticalScrollBar().setValue(self.ui.scrollArea.verticalScrollBar().maximum())

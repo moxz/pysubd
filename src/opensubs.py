@@ -19,7 +19,6 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 from PyQt4 import QtCore
-from PyQt4.QtCore import pyqtSignal
 import re
 from bs4 import BeautifulSoup
 import sys
@@ -74,7 +73,7 @@ class Addic7ed(QtCore.QThread):
         '''Given filename and the wished language, searches and downloads the best match found from Addic7ed.com'''
 
         self.lang = lang
-        utils.communicator.updategui.emit('Querying Addic7ed.com...')
+        utils.communicator.updategui.emit('Querying Addic7ed.com...', 'info')
 
         for details_dict in files_list[:]:
             if not self.stopping:
@@ -112,7 +111,7 @@ class Addic7ed(QtCore.QThread):
 
     def _query(self, filename):
         utils.communicator.updategui.emit('Searching Addic7ed.com for %s'
-                 % filename)
+                 % filename, 'info')
         guessed_file_data = utils.guess_file_data(filename)
         name = guessed_file_data.get('name')
         season = guessed_file_data.get('season')
@@ -178,7 +177,7 @@ class Addic7ed(QtCore.QThread):
                 result.append(b)
         except:
             utils.communicator.updategui.emit('Following unknown exception occured:\n%s'
-                     % traceback.format_exc())
+                     % traceback.format_exc(), 'error')
         else:
             if result:
                 # Sort the results found by completed, overlapping, best_match
@@ -199,8 +198,8 @@ class Addic7ed(QtCore.QThread):
         ):
 
         referer = searchurl.replace('_', ' ')
-        utils.communicator.updategui.emit('Downloading for %s...'
-                % filename)
+        utils.communicator.updategui.emit('Saving subtitles for %s...'
+                % filename, 'success')
         return utils.download_url_content(link, referer)
 
 
@@ -229,7 +228,7 @@ class OpenSubtitles(QtCore.QThread):
 
     def run(self):
         self.stopping = False
-        utils.communicator.updategui.emit('Querying OpenSubtitles.org...'
+        utils.communicator.updategui.emit('Querying OpenSubtitles.org...', 'info'
                 )
 
         if not self.login_token:
@@ -240,19 +239,19 @@ class OpenSubtitles(QtCore.QThread):
         '''Log in to OpenSubtitles.org'''
 
         self.server = ServerProxy(self.api_url, verbose=False)
-        utils.communicator.updategui.emit('Logging in to OpenSubtitles.org...'
+        utils.communicator.updategui.emit('Logging in to OpenSubtitles.org...', 'info'
                 )
         try:
             resp = self.server.LogIn('', '', 'en', 'PySubD v2.0')
             self.check_status(resp)
             self.login_token = resp['token']
         except Error, e:
-            utils.communicator.updategui.emit(e)
+            utils.communicator.updategui.emit(e, 'error')
 
     def logout(self):
         '''Log out from OpenSubtitles'''
 
-        utils.communicator.updategui.emit('Logging out...')
+        utils.communicator.updategui.emit('Logging out...', 'info')
         resp = self.server.LogOut(self.login_token)
         self.check_status(resp)
 
@@ -335,7 +334,7 @@ class OpenSubtitles(QtCore.QThread):
         for (hash, filedetails) in self.moviefiles.iteritems():
             if not self.stopping:
                 if subtitles.get(hash):
-                    utils.communicator.updategui.emit('Saving subtitles for %s'%filedetails['file_name'])
+                    utils.communicator.updategui.emit('Saving subtitles for %s'%filedetails['file_name'], 'success')
                     subtitle = \
                         self.download_subtitles([subtitles[hash]['subid'
                             ]])

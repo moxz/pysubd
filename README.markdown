@@ -2,7 +2,7 @@ Python Subtitle Downloader(PySubD)
 =================================
 
 * Recursively walks through the directories searching for video files in almost every well known format.
-* Searches OpenSubtitles.org and fetches the best quality subs available.
+* Searches OpenSubtitles.org and Addic7ed.com and fetches the best quality subs available.
 * Downloads subtitles and places them along with the video file itself.
 
 Requirements
@@ -21,11 +21,17 @@ Sahil Gupta
 Mail in your in feedback, bug reports or feature suggestions to sahilgupt29@gmail.com.
 Did PySubD save you some precious time? If Yes, then send in your donations through PayPal to sahilgupta29@gmail.com
 
-PySubD is powered by the awesome subtitles service provided by www.OpenSubtitles.org, Kindly consider donating to them as well.
+PySubD is powered by the awesome subtitles service provided by www.OpenSubtitles.org and www.addic7ed.com.
+Kindly consider donating to them as well.
 This is a free and open source software. Source code can be obtained at https://github.com/sahilgupta/pysubd/
 
 Changelog
 ---------
+v2.0
+A near complete rewrite of the entire application.
+Adds the much demanded feature of searching Addic7ed for TV series.
+Fixes a minor bug.
+
 v1.1.1
 Added icons to the main window.
 

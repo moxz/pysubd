@@ -69,13 +69,9 @@ class Addic7ed(QtCore.QThread):
         QtCore.QThread.__init__(self, parent)
         self.stopping = False
 
-    def process(self, files_list, lang='English'):
-        '''Given filename and the wished language, searches and downloads the best match found from Addic7ed.com'''
-
-        self.lang = lang
+    def run(self):
         utils.communicator.updategui.emit('Querying Addic7ed.com...', 'info')
-
-        for details_dict in files_list[:]:
+        for details_dict in self.files_list[:]:
             if not self.stopping:
                 filename = details_dict['file_name']
                 save_to = details_dict['save_subs_to']
@@ -86,14 +82,21 @@ class Addic7ed(QtCore.QThread):
                         subs = self.download_subtitles(searched_url,
                                 downloadlink, filename)
                     except utils.DailyDownloadLimitExceeded:
-                        for details_dict in files_list:
+                        for details_dict in self.files_list:
                             utils.communicator.reprocess.emit(details_dict)
                         raise
                     utils.save_subs(subs, save_to)
-                    files_list.remove(details_dict)
+                    self.files_list.remove(details_dict)
                     utils.communicator.downloaded_sub.emit()
                 else:
-                    utils.communicator.reprocess.emit(details_dict)
+                    utils.communicator.reprocess.emit(details_dict)        
+
+    def process(self, files_list, lang='English'):
+        '''Given filename and the wished language, searches and downloads the best match found from Addic7ed.com'''
+        self.lang = lang
+        self.files_list = files_list
+        self.stopping = False
+        self.start()
 
     def stopTask(self):
         self.stopping = True
@@ -211,12 +214,14 @@ class OpenSubtitles(QtCore.QThread):
     logger = utils.logger
 
     def __init__(self, parent=None):
+        self.stopping = False
         QtCore.QThread.__init__(self, parent)
 
     def process(self, files_list, lang='English'):
         self.moviefiles = files_list
         self.imdbid_to_hash = {}
         self.lang = LANGUAGES[lang][1]
+        self.stopping = False
         self.start()
 
     def __del__(self):
@@ -227,10 +232,8 @@ class OpenSubtitles(QtCore.QThread):
         self.stopping = True
 
     def run(self):
-        self.stopping = False
         utils.communicator.updategui.emit('Querying OpenSubtitles.org...', 'info'
                 )
-
         if not self.login_token:
             self.login()
         self.search_subtitles()
@@ -274,7 +277,7 @@ class OpenSubtitles(QtCore.QThread):
                 self.check_status(tempresp)
                 search = search[500:]
             else:
-                return
+                return []
         return results
 
     def clean_results(self, results, imdb=False):

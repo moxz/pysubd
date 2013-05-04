@@ -63,7 +63,6 @@ class Site(object):
 class Addic7ed(QtCore.QThread):
 
     host = 'http://www.addic7ed.com'
-    logger = utils.logger
 
     def __init__(self, parent=None):
         QtCore.QThread.__init__(self, parent)
@@ -76,27 +75,33 @@ class Addic7ed(QtCore.QThread):
                 filename = details_dict['file_name']
                 save_to = details_dict['save_subs_to']
 
-                (searched_url, downloadlink) = self._query(filename)
-                if downloadlink:
-                    try:
+                try:
+                    (searched_url, downloadlink) = self._query(filename)
+                    if downloadlink:
                         subs = self.download_subtitles(searched_url,
                                 downloadlink, filename)
-                    except utils.DailyDownloadLimitExceeded:
-                        for details_dict in self.files_list:
-                            utils.communicator.reprocess.emit(details_dict)
-                        raise
+                    else:
+                        utils.communicator.updategui.emit('Nothing found.', 'error')
+                        utils.communicator.reprocess.emit(details_dict)
+                        continue
+                except utils.NoInternetConnectionFound:
+                        utils.communicator.updategui.emit('No active Internet connection found. Kindly check and try again.',
+                    'error')
+                except: #utils.DailyDownloadLimitExceeded:
+                    for details_dict in self.files_list:
+                        utils.communicator.reprocess.emit(details_dict)
+                    raise
+                else:
                     utils.save_subs(subs, save_to)
                     self.files_list.remove(details_dict)
                     utils.communicator.downloaded_sub.emit()
-                else:
-                    utils.communicator.reprocess.emit(details_dict)        
 
     def process(self, files_list, lang='English'):
         '''Given filename and the wished language, searches and downloads the best match found from Addic7ed.com'''
         self.lang = lang
         self.files_list = files_list
-        self.stopping = False
-        self.start()
+        if not self.stopping:
+            self.start()
 
     def stopTask(self):
         self.stopping = True
@@ -127,7 +132,7 @@ class Addic7ed(QtCore.QThread):
 
         name = name.lower().replace(' ', '_')
         teams = set(teams)
-        self.logger.debug('[Addic7ed] Searched URL for %s:  %s'
+        logger.debug('[Addic7ed] Searched URL for %s:  %s'
                           % (filename, searchurl))
         best_match = None
 
@@ -152,9 +157,9 @@ class Addic7ed(QtCore.QThread):
                 links = statusTD.find_next('td').find_all('a')
                 link = '%s%s' % ('http://www.addic7ed.com',
                                  links[len(links) - 1]['href'])
-                self.logger.debug('[Addic7ed] Team from website: %s'
+                logger.debug('[Addic7ed] Team from website: %s'
                                   % subteams)
-                self.logger.debug('[Addic7ed] Team from file: %s'
+                logger.debug('[Addic7ed] Team from file: %s'
                                   % teams)
 
                 b = {}
@@ -188,7 +193,7 @@ class Addic7ed(QtCore.QThread):
                 best_match = sorted(result, key=itemgetter('completed',
                                     'overlap', 'best_match'),
                                     reverse=True)[0]
-                self.logger.debug('A best match subtitle for %s found at %s'
+                logger.debug('A best match subtitle for %s found at %s'
                                    % (searchurl, best_match.get('link',
                                   None)))
         return (searchurl, best_match.get('link') if best_match else None)
@@ -211,18 +216,17 @@ class OpenSubtitles(QtCore.QThread):
     api_url = 'http://api.opensubtitles.org/xml-rpc'
     login_token = None
     server = None
-    logger = utils.logger
 
     def __init__(self, parent=None):
-        self.stopping = False
         QtCore.QThread.__init__(self, parent)
+        self.stopping = False
 
     def process(self, files_list, lang='English'):
         self.moviefiles = files_list
         self.imdbid_to_hash = {}
         self.lang = LANGUAGES[lang][1]
-        self.stopping = False
-        self.start()
+        if not self.stopping:
+            self.start()
 
     def __del__(self):
         if self.login_token:
@@ -234,9 +238,13 @@ class OpenSubtitles(QtCore.QThread):
     def run(self):
         utils.communicator.updategui.emit('Querying OpenSubtitles.org...', 'info'
                 )
-        if not self.login_token:
-            self.login()
-        self.search_subtitles()
+        try:
+            if not self.login_token:
+                self.login()
+            self.search_subtitles()
+        except utils.NoInternetConnectionFound:
+            utils.communicator.updategui.emit('No active Internet connection found. Kindly check and try again.',
+                    'error')
 
     def login(self):
         '''Log in to OpenSubtitles.org'''
@@ -248,8 +256,11 @@ class OpenSubtitles(QtCore.QThread):
             resp = self.server.LogIn('', '', 'en', 'PySubD v2.0')
             self.check_status(resp)
             self.login_token = resp['token']
-        except Error, e:
-            utils.communicator.updategui.emit(e, 'error')
+        except Exception as e:
+            if e.args[0] == 11004:
+                utils.communicator.updategui.emit("No Internet Connection Found", 'error')
+            else:
+                utils.communicator.updategui.emit(str(e), 'error')
 
     def logout(self):
         '''Log out from OpenSubtitles'''
@@ -271,13 +282,21 @@ class OpenSubtitles(QtCore.QThread):
         results = []
         while search[:500]:
             if not self.stopping:
-                tempresp = self.server.SearchSubtitles(self.login_token, search[:500])
+                try:
+                    tempresp = self.server.SearchSubtitles(self.login_token, search[:500])
+                except Exception as e:
+                    if e.args[0] == 11004:
+                        utils.communicator.updategui.emit("No Internet Connection Found", 'error')
+                    else:
+                        utils.communicator.updategui.emit(str(e), 'error')
+                    return results
                 if tempresp['data']:
                     results.extend(tempresp['data'])
                 self.check_status(tempresp)
                 search = search[500:]
             else:
                 return []
+        logger.debug('Results: %s' % results)
         return results
 
     def clean_results(self, results, imdb=False):

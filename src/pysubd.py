@@ -5,6 +5,7 @@ from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import pyqtSlot
 from gui.widgets import FileDialog
 from SubtitleDownload import SubtitleDownload
+from gui.mainwindow_ui import Ui_MainWindow
 import sys
 import platform
 if platform.system() == 'Windows' and platform.release() == '7':
@@ -12,14 +13,14 @@ if platform.system() == 'Windows' and platform.release() == '7':
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('PySubD')
 
 import utils
-logger = utils.logger
 communicator = utils.communicator
 
 class PySubD(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
-        self.ui = uic.loadUi('gui/mainwindow.ui', self)
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
         self.tobeSearched = []
         self.ui.progressUpdate.append('''<p align="center" style=" margin-top:0px; margin-bottom:0px; 
                                         margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">
@@ -121,7 +122,6 @@ class PySubD(QtGui.QMainWindow):
         elif update_type == 'success':
             color = 'green'
         update = '''<span style="color: %s;">%s</span>'''%(color, text)
-        logger.info(update)
         self.ui.progressUpdate.append(update)
         self.ui.scrollArea.verticalScrollBar().setValue(self.ui.scrollArea.verticalScrollBar().maximum())
 

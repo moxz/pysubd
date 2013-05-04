@@ -8,6 +8,7 @@ from opensubs import Site
 import utils
 from PyQt4.QtCore import pyqtSlot
 from Queue import Queue
+import time
 
 communicator = utils.communicator
 
@@ -17,15 +18,13 @@ class SubtitleDownload(QtCore.QThread):
     '''Traverses a directory and all subdirectories and downloads
         the best available subtitles.'''
 
-    queue = Queue()
 
     def __init__(self, parent=None):
         QtCore.QThread.__init__(self, parent)
-
+        self.queue = Queue()
         self.not_found = []
         communicator.no_sub_found.connect(self.append_to_not_found)
         communicator.reprocess.connect(self.add_to_q)
-        self.logger = utils.logger
         self.sites = {'Addic7ed': Site().create('Addic7ed'),
                       'OpenSubtitles': Site().create('OpenSubtitles')}
 
@@ -51,7 +50,6 @@ class SubtitleDownload(QtCore.QThread):
             communicator.updategui.emit('No active Internet connection found. Kindly check and try again.',
                     'error')
         except:
-            self.logger.exception('Unknown Exception')
             communicator.updategui.emit('An unknown exception occured:\n%s'
                  % traceback.format_exc(), 'error')
         self.print_not_found()
@@ -90,9 +88,6 @@ class SubtitleDownload(QtCore.QThread):
                         'moviehash':filehash,
                         'moviebytesize': str(filesize)})
 
-    def add_to_q(self, data):
-        self.queue.put(data)
-
     def catch_all(self, site, files, lang):
         try:
             self.sites[site].process(files, self.lang)
@@ -108,15 +103,18 @@ class SubtitleDownload(QtCore.QThread):
     def process_queue(self):
         addic7ed_list = []
         opensubs_dict = {}
+        
         for x in range(self.queue.qsize()):
             video = self.queue.get_nowait()
             if video['type'] == 'Addic7ed':
                 addic7ed_list.append(video)
             else:
                 self.queue.put_nowait(video)
-
+        
         if addic7ed_list:
             self.catch_all('Addic7ed', addic7ed_list, self.lang)
+        
+        time.sleep(0.01) #To prevent race condition
 
         opensubs_list = [self.queue.get_nowait() for x in range(self.queue.qsize())]
         for x in opensubs_list:
@@ -127,6 +125,10 @@ class SubtitleDownload(QtCore.QThread):
     @pyqtSlot(object)
     def append_to_not_found(self, filename):
         self.not_found.append(filename)
+
+    @pyqtSlot(object)
+    def add_to_q(self, data):
+        self.queue.put(data)
 
     def print_not_found(self):
         self.not_found.sort(key=str.lower)

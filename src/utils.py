@@ -10,6 +10,7 @@ import requests
 from PyQt4.QtCore import QObject, pyqtSignal
 from operator import itemgetter
 import socket
+from requests import exceptions
 
 
 class NoInternetConnectionFound(Exception):
@@ -60,7 +61,6 @@ def get_logger():
     logger = logging.getLogger('PySubDLogger')
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(funcName)s %(levelname)-8s %(message)s',
-                        datefmt='%a, %d %b %Y %H:%M:%S',
                         filename=LOG_FILENAME, filemode='a')
     handler = logging.handlers.RotatingFileHandler(LOG_FILENAME,
             maxBytes=50000)
@@ -184,7 +184,7 @@ def calc_file_hash(filepath):
         raise
 
 
-def download_url_content(url, referer=None, timeout=10):
+def download_url_content(url, referer=None, timeout=5):
     ''' Downloads and returns the contents of the given url.'''
 
     logger.debug('Downloading contents of %s' % url)
@@ -193,9 +193,8 @@ def download_url_content(url, referer=None, timeout=10):
     else:
         request_headers['Referer'] = url
     try:
-        x = requests.get(url, headers=request_headers, timeout=timeout,
-                         prefetch=True)
-    except (requests.exceptions.Timeout, timeout, socket.timeout):
+        x = requests.get(url, headers=request_headers, timeout=timeout)
+    except (requests.exceptions.Timeout, timeout, exceptions.ConnectionError, socket.timeout):
         raise NoInternetConnectionFound
 
     if x.status_code != 200:

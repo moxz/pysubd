@@ -183,8 +183,7 @@ def calc_file_hash(filepath):
     except IOError:
         raise
 
-
-def download_url_content(url, referer=None, timeout=5):
+def download_url_content(url, referer=None, timeout=10):
     ''' Downloads and returns the contents of the given url.'''
 
     logger.debug('Downloading contents of %s' % url)
@@ -192,14 +191,15 @@ def download_url_content(url, referer=None, timeout=5):
         request_headers['Referer'] = referer
     else:
         request_headers['Referer'] = url
+
     try:
         x = requests.get(url, headers=request_headers, timeout=timeout)
-    except (requests.exceptions.Timeout, timeout, exceptions.ConnectionError, socket.timeout):
+    except (requests.exceptions.Timeout, exceptions.ConnectionError, socket.timeout):
         raise NoInternetConnectionFound
 
     if x.status_code != 200:
         raise IncorrectResponseRecieved
-    
+
     if x.content.find('Daily Download count exceeded') != -1:
         raise DailyDownloadLimitExceeded
     else:

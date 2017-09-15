@@ -319,6 +319,12 @@ class OpenSubtitles(QtCore.QThread):
                 subid = result['IDSubtitleFile']
                 downcount = int(result['SubDownloadsCnt'])
                 rating = float(result['SubRating'])
+
+                if rating and rating < 8:
+                    # Ignore poorly rated subtitles, while not
+                    # penalizing the ones that haven't yet been rated
+                    continue
+
                 user_rank = user_ranks[result['UserRank']]
 
                 if imdb:

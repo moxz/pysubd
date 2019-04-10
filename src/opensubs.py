@@ -62,7 +62,7 @@ class Site(object):
 
 class Addic7ed(QtCore.QThread):
 
-    host = 'http://www.addic7ed.com'
+    host = 'https://www.addic7ed.com'
 
     def __init__(self, parent=None):
         QtCore.QThread.__init__(self, parent)

@@ -7,7 +7,7 @@ import traceback
 from opensubs import Site
 import utils
 from PyQt4.QtCore import pyqtSlot
-from Queue import Queue
+import queue
 import time
 
 communicator = utils.communicator
@@ -21,7 +21,7 @@ class SubtitleDownload(QtCore.QThread):
 
     def __init__(self, parent=None):
         QtCore.QThread.__init__(self, parent)
-        self.queue = Queue()
+        self.queue = queue.Queue()
         self.not_found = []
         communicator.no_sub_found.connect(self.append_to_not_found)
         communicator.reprocess.connect(self.add_to_q)
@@ -95,7 +95,7 @@ class SubtitleDownload(QtCore.QThread):
         except utils.IncorrectResponseRecieved:
             communicator.updategui.emit('Exception: IncorrectResponseRecieved', 'error'
                     )
-        except UserWarning, uw:
+        except UserWarning as uw:
             communicator.updategui.emit(uw, 'error')
         except utils.DailyDownloadLimitExceeded:
             communicator.updategui.emit('You have reached your daily download limit for Addic7ed.com', 'error')

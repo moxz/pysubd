@@ -41,9 +41,9 @@ LANGUAGES = {
     u'English': ('1', 'eng'),
     u'French': ('8', 'fre'),
     u'Greek': ('27', 'ell'),
+	u'Italian': ('7', 'ita'),
+	u'Portuguese(Br)': ('10', 'pob'),
     u'Spanish': ('4', 'spa'),
-    u'Portuguese(Br)': ('10', 'pob'),
-    u'Italian': ('7', 'ita'),
     }
 
 
@@ -155,7 +155,7 @@ class Addic7ed(QtCore.QThread):
                 statusTD = langs_html.find_next('td')
                 status = statusTD.text.strip()
                 links = statusTD.find_next('td').find_all('a')
-                link = '%s%s' % ('http://www.addic7ed.com',
+                link = '%s%s' % ('https://www.addic7ed.com',
                                  links[len(links) - 1]['href'])
                 logger.debug('[Addic7ed] Team from website: %s'
                                   % subteams)
